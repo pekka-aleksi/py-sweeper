@@ -80,17 +80,40 @@ class TestCoordinate(unittest.TestCase):
         assert c.state == State.ORANGE
 
 
-
 class Board:
     def __init__(self):
-        self.cols = 1
-        self.rows = 1
+        self.board = [[Coordinate()]]
+
+    def click(self, x, y):
+        self.board[x][y].click()
 
 
 class TestBoard(unittest.TestCase):
 
     def testNewBoardWithOneCoordinate(self):
         b = Board()
-        assert b.cols == 1 and b.rows == 1
+        assert b.board[0][0].state == State.RED
+
+    def testClickCoordinateOnBoard(self):
+        b = Board()
+        b.click(0, 0)
+        assert b.board[0][0].state == State.YELLOW
 
 
+class Game:
+    def __init__(self):
+        self.board = Board()
+
+    def click(self, x, y):
+        self.board.click(x, y)
+
+        if self.board.board[x][y].state == State.YELLOW:
+            self.state = 'WIN'
+
+
+class TestGame(unittest.TestCase):
+
+    def testNewGameWithOneCoordinateWithoutMine(self):
+        g = Game()
+        g.click(0, 0)
+        assert g.state == 'WIN'
