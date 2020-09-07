@@ -35,13 +35,8 @@ class TestCoordinate(unittest.TestCase):
         c.flag()
         self.assertEqual(State.FLAGGED_NO_MINE, c.state)
 
-    def testFlagCoordinateWithMine(self):
-        c = Coordinate(state=State.NO_CLICK_YES_MINE)
-        c.flag()
-        self.assertEqual(State.FLAGGED_YES_MINE, c.state)
-
     def testClickCoordinateWithoutMine(self):
-        c = Coordinate()
+        c = Coordinate(State.NO_CLICK_NO_MINE)
         c.click()
         self.assertEqual(State.YES_CLICK_NO_MINE, c.state)
 
@@ -61,3 +56,9 @@ class TestCoordinate(unittest.TestCase):
         c.flag()
         c.click()
         self.assertEqual(State.YES_CLICK_YES_MINE, c.state)
+
+
+    def testFlagCoordinateWithMine(self):
+        c = Coordinate(state=State.NO_CLICK_YES_MINE)
+        c.flag()
+        self.assertEqual(State.FLAGGED_YES_MINE, c.state)
