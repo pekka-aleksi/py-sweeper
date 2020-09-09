@@ -11,9 +11,9 @@ class Game:
         self.state = "undecided"
 
     def click(self, x, y):
-        self.board.click(x, y)
+        self.board.click((x, y))
 
-        if self.board.board[x][y].state == State.YES_CLICK_NO_MINE:
+        if self.board.board[x,y].state == State.YES_CLICK_NO_MINE:
             self.state = 'WIN'
         else:
             self.state = 'LOSS'

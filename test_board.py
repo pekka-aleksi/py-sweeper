@@ -3,6 +3,8 @@ import random
 import unittest
 from functools import reduce
 
+from test_ndarray import NdArray
+
 OUR_SEED = 0
 
 from my_globals import State
@@ -14,8 +16,10 @@ class OutOfBoundsError(Exception):
 
 
 class Board:
-    def __init__(self, shape=(1, 1,), mines=0, default_state=State.NO_CLICK_NO_MINE, seed=0):
-        # we should really be mocking this for testing purposes
+    def __init__(self, board=None, shape=(1, 1,), mines=0, default_state=State.NO_CLICK_NO_MINE, seed=0):
+
+        data = [Coordinate(default_state) for _ in range(math.prod(shape))]
+        self.board = board or NdArray(shape, data=data)
 
         random.seed(seed)
         self.mines = random.sample(range(math.prod(shape)), mines)
@@ -32,37 +36,33 @@ class Board:
 
             self.minesd.append(coordinate)
 
+        for mine in self.minesd:
+            self.board[mine].state = State.NO_CLICK_YES_MINE
 
-        self.board = [[Coordinate(default_state) for _ in range(shape[1])] for _ in range(shape[0])]
-
-        for x, y in self.minesd:
-
-            self.board[x][y].state = State.NO_CLICK_YES_MINE
-
-    def click(self, x, y):
-        self.board[x][y].click()
+    def click(self, coordinate):
+        self.board[coordinate].click()
 
 
 class TestBoard(unittest.TestCase):
 
     def testDEFAULTBoard_is_OneCoordinateWithoutMine(self):
         b = Board()
-        self.assertEqual(State.NO_CLICK_NO_MINE, b.board[0][0].state)
+        self.assertEqual(State.NO_CLICK_NO_MINE, b.board[(0,0)].state)
 
     def testClickNewBoardWithOneCoordinateWithMine(self):
         b = Board(default_state=State.NO_CLICK_YES_MINE)
 
-        b.click(0, 0)
-        self.assertEqual(State.YES_CLICK_YES_MINE, b.board[0][0].state)
+        b.click((0, 0))
+        self.assertEqual(State.YES_CLICK_YES_MINE, b.board[(0, 0)].state)
 
     def testClickNewBoardWithOneCoordinateWithoutMine(self):
         b = Board(default_state=State.NO_CLICK_NO_MINE)
-        b.click(0, 0)
-        self.assertEqual(State.YES_CLICK_NO_MINE, b.board[0][0].state)
+        b.click((0, 0))
+        self.assertEqual(State.YES_CLICK_NO_MINE, b.board[(0,0)].state)
 
     def testOneDimensionalBoard(self):
         b = Board(shape=(5, 1), default_state=State.NO_CLICK_NO_MINE)
-        self.assertRaises(IndexError, b.click, 1, 1)
+        self.assertRaises(IndexError, b.click, (1, 1))
 
     def testOneDimensionalBoardWithRandomMines(self):
 
@@ -74,7 +74,7 @@ class TestBoard(unittest.TestCase):
         for i in expected_mines:
             empty_board[i] = State.NO_CLICK_YES_MINE
 
-        B_state = [C.state for C in b.board[0]]
+        B_state = [C.state for C in b.board.data]
 
         self.assertEqual(empty_board, B_state)
 
@@ -87,7 +87,7 @@ class TestBoard(unittest.TestCase):
 
         b = Board(shape=(W, H), mines=len(expected_mines), seed=OUR_SEED)
 
-        empty_board = [[State.NO_CLICK_NO_MINE for i in range(H)] for j in range(W)]
+        empty_board = NdArray(shape=(W,H), data=[State.NO_CLICK_NO_MINE for _ in range(W*H)])
 
         for mine in expected_mines:
             div = mine
@@ -97,36 +97,24 @@ class TestBoard(unittest.TestCase):
                 div, mod = divmod(div, dimension)
                 coordinate.append(mod)
 
-            empty_board[coordinate[0]][coordinate[1]] = State.NO_CLICK_YES_MINE
+            empty_board[coordinate] = State.NO_CLICK_YES_MINE
 
-        B_state = [[coordinate.state for coordinate in row] for row in b.board]
+        expected_state = [e for e in empty_board.data]
+        state = [i.state for i in b.board.data]
 
-        self.assertEqual(empty_board, B_state)
+        self.assertEqual(expected_state, state)
 
-    @unittest.skip("we're not doing 3d yet")
     def testThreeDimensionalBoardWithRandomMines(self):
         expected_mines = [1, 6, 8, 9, 11, 12, 13, 15, 16, 20, 24, 26]
 
         shape = (3, 3, 3)
         b = Board(shape=shape, mines=len(expected_mines), seed=OUR_SEED)
 
-        empty_board = [[[State.NO_CLICK_NO_MINE for _ in range(shape[0])] for _ in range(shape[1])] for _ in
-                       range(shape[2])]
+        expected_board = NdArray(shape=shape, data=[State.NO_CLICK_NO_MINE for _ in range(math.prod(shape))])
+        coordinates = expected_board.index_to_coordinate(expected_mines)
 
-        coordinates = list()
-        for mine in expected_mines:
+        for mine in coordinates:
+            expected_board[mine] = State.NO_CLICK_YES_MINE
 
-            div = mine
+        self.assertEqual(expected_board.data, [c.state for c in b.board.data])
 
-            coordinate = list()
-
-            for dimension in shape:
-                div, mod = divmod(div, dimension)
-                coordinate.append(mod)
-
-            coordinates.append(coordinate)
-
-        for x, y, z in coordinates:
-            empty_board[x][y][z] = State.NO_CLICK_YES_MINE
-
-        self.assertTrue(False)

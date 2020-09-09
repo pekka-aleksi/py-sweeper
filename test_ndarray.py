@@ -4,10 +4,22 @@ import unittest
 
 class NdArray:
 
-    def __init__(self, shape):
+    def __init__(self, shape, data=list()):
         super().__init__()
         self.shape = shape
-        self.data = [None for _ in range(math.prod(shape))]
+        self.data = data or [None for _ in range(math.prod(shape))]
+
+    def __setitem__(self, coordinate, item):
+        index = self.coordinate_to_index(coordinate=coordinate)
+        self.data[index] = item
+
+    def __getitem__(self, coordinate):
+        index = self.coordinate_to_index(coordinate=coordinate)
+        return self.data[index]
+
+    def __str__(self):
+
+        return "|".join([str(x) for x in self.data])
 
     def index_to_coordinate(self, index_list):
 
@@ -35,6 +47,15 @@ class NdArray:
 
 
 class TestNdArray(unittest.TestCase):
+
+    def test_get(self):
+        x = NdArray(shape=(2, 2), data=[0, 1, 2, 3])
+        self.assertEqual([0, 2, 1, 3], [x[0, 0], x[0, 1], x[1, 0], x[1, 1]])
+
+    def test_set(self):
+        x = NdArray(shape=(3, 3, 3))
+        x[1, 1, 1] = 5
+        self.assertEqual(5, x[1, 1, 1])
 
     def testRecursiveList7(self):
         l = NdArray(shape=(10, 10))
