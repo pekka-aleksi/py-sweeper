@@ -1,6 +1,7 @@
 import math
 import random
 import unittest
+from functools import reduce
 
 OUR_SEED = 0
 
@@ -13,7 +14,7 @@ class OutOfBoundsError(Exception):
 
 
 class Board:
-    def __init__(self, shape=(1,1,), mines=0, default_state=State.NO_CLICK_NO_MINE, seed=0):
+    def __init__(self, shape=(1, 1,), mines=0, default_state=State.NO_CLICK_NO_MINE, seed=0):
         # we should really be mocking this for testing purposes
 
         random.seed(seed)
@@ -31,17 +32,12 @@ class Board:
 
             self.minesd.append(coordinate)
 
-        #def nd(dims):
-        #    a = lambda dims: [Coordinate(default_state) for i in range(dims[0])] if len(dims) == 1 else [a(dims[1:]) for _ in range(dims[0])]
-        #    return a(dims)
 
         self.board = [[Coordinate(default_state) for _ in range(shape[1])] for _ in range(shape[0])]
 
-        for x, y  in self.minesd:
-            print(x, y )
-            print(self.board)
-            self.board[x][y].state = State.NO_CLICK_YES_MINE
+        for x, y in self.minesd:
 
+            self.board[x][y].state = State.NO_CLICK_YES_MINE
 
     def click(self, x, y):
         self.board[x][y].click()
@@ -86,8 +82,8 @@ class TestBoard(unittest.TestCase):
         expected_mines = [5, 12, 17, 27, 32, 33, 36, 38, 45, 49, 51, 53, 61, 62, 64, 65, 74, 79, 96, 97]
         W, H = 10, 10
 
-        #expected_mines = [1, 4, 5, 6, 7, 8, 12, 13, 15, 19]
-        #W, H = 4, 5
+        # expected_mines = [1, 4, 5, 6, 7, 8, 12, 13, 15, 19]
+        # W, H = 4, 5
 
         b = Board(shape=(W, H), mines=len(expected_mines), seed=OUR_SEED)
 
@@ -97,7 +93,7 @@ class TestBoard(unittest.TestCase):
             div = mine
             coordinate = list()
 
-            for dimension in (W,H):
+            for dimension in (W, H):
                 div, mod = divmod(div, dimension)
                 coordinate.append(mod)
 
@@ -107,7 +103,6 @@ class TestBoard(unittest.TestCase):
 
         self.assertEqual(empty_board, B_state)
 
-
     @unittest.skip("we're not doing 3d yet")
     def testThreeDimensionalBoardWithRandomMines(self):
         expected_mines = [1, 6, 8, 9, 11, 12, 13, 15, 16, 20, 24, 26]
@@ -115,7 +110,8 @@ class TestBoard(unittest.TestCase):
         shape = (3, 3, 3)
         b = Board(shape=shape, mines=len(expected_mines), seed=OUR_SEED)
 
-        empty_board = [[[State.NO_CLICK_NO_MINE for _ in range(shape[0])] for _ in range(shape[1])] for _ in range(shape[2])]
+        empty_board = [[[State.NO_CLICK_NO_MINE for _ in range(shape[0])] for _ in range(shape[1])] for _ in
+                       range(shape[2])]
 
         coordinates = list()
         for mine in expected_mines:
@@ -132,6 +128,5 @@ class TestBoard(unittest.TestCase):
 
         for x, y, z in coordinates:
             empty_board[x][y][z] = State.NO_CLICK_YES_MINE
-
 
         self.assertTrue(False)
