@@ -25,7 +25,12 @@ class NdArray:
 
         answer_list = []
 
+        MAX_INDEX = math.prod(self.shape) - 1
+
         for index in index_list:
+
+            if index < 0 or index > MAX_INDEX:
+                raise IndexError
             div = index
 
             coordinate = list()
@@ -41,6 +46,10 @@ class NdArray:
     def coordinate_to_index(self, coordinate):
         summa = 0
         for k, n_k in enumerate(coordinate):
+
+            if n_k < 0 or n_k > self.shape[k]:
+                raise IndexError
+
             N_l = math.prod(self.shape[:k])
             summa += N_l * n_k
         return summa
@@ -85,7 +94,7 @@ class TestNdArray(unittest.TestCase):
         l = NdArray(shape=[5])
 
         self.assertEqual([[1]], l.index_to_coordinate([1]), l)
-        self.assertEqual([[0]], l.index_to_coordinate([5]), l)
+        self.assertRaises(IndexError, l.index_to_coordinate, [5])
 
     def testRecursiveList2(self):
         l = NdArray(shape=[1, 10])
@@ -93,14 +102,14 @@ class TestNdArray(unittest.TestCase):
         self.assertEqual([[0, 0]], l.index_to_coordinate([0]), l)
         self.assertEqual([[0, 1]], l.index_to_coordinate([1]), l)
         self.assertEqual([[0, 9]], l.index_to_coordinate([9]), l)
-        self.assertEqual([[0, 0]], l.index_to_coordinate([10]), l)
+        self.assertRaises(IndexError,  l.index_to_coordinate, [10])
 
     def testRecursiveList3(self):
         l = NdArray(shape=[10, 1])
         self.assertEqual([[0, 0]], l.index_to_coordinate([0]), l)
         self.assertEqual([[1, 0]], l.index_to_coordinate([1]), l)
         self.assertEqual([[9, 0]], l.index_to_coordinate([9]), l)
-        self.assertEqual([[0, 0]], l.index_to_coordinate([10]), l)
+        self.assertRaises(IndexError,  l.index_to_coordinate, [10])
 
     def testRecursiveList4(self):
         l = NdArray(shape=[10, 10])
