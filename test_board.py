@@ -69,9 +69,9 @@ class Board:
 
         neighbors = list(product((0, -1, +1), repeat=len(coordinate)))
 
-        neighbors = {tuple(min(max(x + C, 0), self.shape[i]-1)
+        neighbors = {tuple(min(max(x + C, 0), self.shape[i] - 1)
                            for i, (x, C) in enumerate(zip(neighbor, coordinate)))
-                            for neighbor in neighbors}
+                     for neighbor in neighbors}
 
         return neighbors - {coordinate}
 
@@ -83,6 +83,22 @@ class TestBoard(unittest.TestCase):
         b = Board(shape=(3, 3, 3))
         N = b.get_neighbors((1, 1, 1))
 
+    def test2DBoard(self):
+
+        with self.subTest('3 in corner'):
+            b = Board((9, 9), minelist=[(0, 1), (1, 1), (1, 0)])
+            self.assertEqual(3, b.click((0, 0)))
+
+        with self.subTest('5 in border'):
+            b = Board((9, 9), minelist=[(0, 0), (1, 0), (1, 1), (1, 2), (0, 2)])
+            self.assertEqual(5, b.click((0, 1)))
+
+        with self.subTest('8 all around'):
+            b = Board((9, 9), minelist=[(0, 0), (0, 1), (0, 2),
+                                        (1, 0),         (1, 2),
+                                        (2, 0), (2, 1), (2, 2)])
+
+            self.assertEqual(8, b.click((1, 1)))
 
     def testDEFAULTBoard_is_OneCoordinateWithoutMine(self):
         b = Board()
