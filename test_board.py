@@ -1,7 +1,6 @@
 import math
 import random
 import unittest
-from functools import reduce
 from itertools import product
 from test_ndarray import NdArray
 import collections
@@ -17,30 +16,19 @@ class OutOfBoundsError(Exception):
 
 
 class Board:
-    def __init__(self, board=None, shape=(1, 1,), minelist=(), minecount=0, default_state=State.NO_CLICK_NO_MINE,
+    def __init__(self, shape=(1, 1,), minelist=(), minecount=0, default_state=State.NO_CLICK_NO_MINE,
                  seed=0):
 
         self.shape = shape
         data = [Coordinate(default_state) for _ in range(math.prod(shape))]
-        self.board = board or NdArray(shape, data=data)
+        self.board = NdArray(shape, data=data)
 
         random.seed(seed)
-        self.minesd = list()
+        self.minesd = minelist
 
         if minecount:
             self.mines = random.sample(range(math.prod(shape)), minecount)
-        else:
-            self.mines = minelist
-
-        for mine in self.mines:
-            div = mine
-            coordinate = list()
-
-            for dimension in shape:
-                div, mod = divmod(div, dimension)
-                coordinate.append(mod)
-
-            self.minesd.append(coordinate)
+            self.minesd = self.board.index_to_coordinate(self.mines)
 
         for mine in self.minesd:
             self.board[mine].state = State.NO_CLICK_YES_MINE
@@ -54,29 +42,33 @@ class Board:
 
         neighbors = self.get_neighbors(coordinate=coordinate)
 
-        counter = collections.defaultdict(int)
+        counter = collections.defaultdict(lambda: collections.defaultdict(int))
+        #
+        #   {
+        #       (0,0) : State.NO_CLICK_YES_MINE,
+        #       (0,1) : 2,
+        #       (0,2) : State.NO_CLICK_YES_MINE
+        #   }
+        #
+        for coordinate in neighbors:
+            neighbor = self.board[coordinate]
+            counter[coordinate][neighbor.state] += 1
 
-        for neighbor in neighbors:
-            try:
-                NEIGHB = self.board[neighbor]
-                counter[NEIGHB.state] += 1
-            except:
-                continue
+        minecount = sum([counts.get(State.NO_CLICK_YES_MINE, 0) for coord, counts in counter.items()])
 
-        #print(counter)
-
-        return counter[State.NO_CLICK_YES_MINE]
+        return minecount
 
     def get_neighbors(self, coordinate):
 
-        if any(x >= self.shape[i] for i, x in enumerate(coordinate)):
+        if len(coordinate) != len(self.shape):
             raise ValueError
         if any(x < 0 for x in coordinate):
             raise ValueError
-        if len(coordinate) != len(self.shape):
+        if any(x >= self.shape[i] for i, x in enumerate(coordinate)):
             raise ValueError
 
         neighbors = list(product((0, -1, +1), repeat=len(coordinate)))
+
         neighbors = {tuple(min(max(x + C, 0), self.shape[i]-1)
                            for i, (x, C) in enumerate(zip(neighbor, coordinate)))
                             for neighbor in neighbors}
@@ -114,27 +106,27 @@ class TestBoard(unittest.TestCase):
     def testOneDBoardCorner(self):
 
         with self.subTest('0'):
-            b = Board(shape=(1, 5), minelist=[1], default_state=State.NO_CLICK_NO_MINE)
+            b = Board(shape=(1, 5), minelist=[[1]], default_state=State.NO_CLICK_NO_MINE)
             cX___ = b.click((0, 0))
             self.assertEqual(1, cX___)
 
         with self.subTest('1'):
-            b = Board(shape=(1, 5), minelist=[1], default_state=State.NO_CLICK_NO_MINE)
+            b = Board(shape=(1, 5), minelist=[[1]], default_state=State.NO_CLICK_NO_MINE)
             _X___ = b.click((0, 1))
             self.assertEqual(-1, _X___)
 
         with self.subTest('2'):
-            b = Board(shape=(1, 5), minelist=[1], default_state=State.NO_CLICK_NO_MINE)
+            b = Board(shape=(1, 5), minelist=[[1]], default_state=State.NO_CLICK_NO_MINE)
             _Xc__ = b.click((0, 2))
             self.assertEqual(1, _Xc__)
 
         with self.subTest('3'):
-            b = Board(shape=(1, 5), minelist=[1], default_state=State.NO_CLICK_NO_MINE)
+            b = Board(shape=(1, 5), minelist=[[1]], default_state=State.NO_CLICK_NO_MINE)
             _X_c_ = b.click((0, 3))
             self.assertEqual(0, _X_c_)
 
         with self.subTest('4'):
-            b = Board(shape=(1, 5), minelist=[1], default_state=State.NO_CLICK_NO_MINE)
+            b = Board(shape=(1, 5), minelist=[[1]], default_state=State.NO_CLICK_NO_MINE)
             _X__c = b.click((0, 4))
             self.assertEqual(0, _X__c)
 

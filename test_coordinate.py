@@ -20,6 +20,7 @@ class Coordinate:
         if self.state == State.NO_CLICK_YES_MINE or self.state == State.FLAGGED_YES_MINE:
             self.state = State.YES_CLICK_YES_MINE
 
+
         return -1 if self.state == State.YES_CLICK_YES_MINE else 0
 
 class TestCoordinate(unittest.TestCase):
