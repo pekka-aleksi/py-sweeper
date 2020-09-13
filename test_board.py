@@ -16,6 +16,7 @@ class OutOfBoundsError(Exception):
 
 
 class Board:
+
     def __init__(self, shape=(1, 1,), minelist=(), minecount=0, default_state=State.NO_CLICK_NO_MINE,
                  seed=0):
 
@@ -40,7 +41,7 @@ class Board:
         if mine == -1:
             return mine
 
-        neighbors = self.get_neighbors(coordinate=coordinate)
+        self.board[coordinate].neighbors = self.get_neighbors(coordinate=coordinate)
 
         counter = collections.defaultdict(lambda: collections.defaultdict(int))
         #
@@ -50,38 +51,139 @@ class Board:
         #       (0,2) : State.NO_CLICK_YES_MINE
         #   }
         #
-        for coordinate in neighbors:
-            neighbor = self.board[coordinate]
-            counter[coordinate][neighbor.state] += 1
+        for neighboring_coordinate in self.board[coordinate].neighbors:
+            neighbor = self.board[neighboring_coordinate]
+            counter[neighboring_coordinate][neighbor.state] += 1
 
         minecount = sum([counts.get(State.NO_CLICK_YES_MINE, 0) for coord, counts in counter.items()])
 
+        self.board[coordinate].orthogonal_neighbors = self.get_neighbors(coordinate, orthogonal=True)
+
+        # here we keep solving the next mines
+
+        for neighboring_coordinate in self.board[coordinate].orthogonal_neighbors:
+
+            try:
+                neighbor_state = self.board[neighboring_coordinate].state
+            except AttributeError:
+                neighbor_state = self.board[neighboring_coordinate]
+
+            if neighbor_state == State.NO_CLICK_NO_MINE:
+                self.click(neighboring_coordinate)
+
+        self.board[coordinate].state = minecount
         return minecount
 
-    def get_neighbors(self, coordinate):
+    def get_neighbors(self, coordinate, orthogonal=False):
 
         if len(coordinate) != len(self.shape):
-            raise ValueError
+            raise ValueError(coordinate)
         if any(x < 0 for x in coordinate):
-            raise ValueError
+            raise ValueError(coordinate)
         if any(x >= self.shape[i] for i, x in enumerate(coordinate)):
-            raise ValueError
+            raise ValueError(coordinate)
 
-        neighbors = list(product((0, -1, +1), repeat=len(coordinate)))
+        if not orthogonal:
+            neighbors = list(product((0, -1, +1), repeat=len(coordinate)))
 
-        neighbors = {tuple(min(max(x + C, 0), self.shape[i] - 1)
-                           for i, (x, C) in enumerate(zip(neighbor, coordinate)))
-                     for neighbor in neighbors}
+            neighbors = {tuple(min(max(x + C, 0), self.shape[i] - 1)
+                               for i, (x, C) in enumerate(zip(neighbor, coordinate)))
+                         for neighbor in neighbors}
+            return neighbors - {coordinate}
 
-        return neighbors - {coordinate}
+        if orthogonal:
+
+            # (1,1) -> (1+1, 1), (1-1, 1) ja (1, 1+1), (1, 1-1)
+            # (1,1,1) -> (1+1, 1, 1), (1-1, 1, 1) ja (1, 1+1, 1), (1, 1-1, 1), ja (1, 1, 1+1), (1, 1, 1-1)
+
+            orthogonal_neighbors = set()
+
+            for i, _ in enumerate(coordinate):
+                first_one = list(coordinate)
+                first_one[i] += 1
+
+                second_one = list(coordinate)
+                second_one[i] -= 1
+
+                first_one = [min(max(c, 0), self.shape[i] - 1) for i, c in enumerate(first_one)]
+                second_one = [min(max(c, 0), self.shape[i] - 1) for i, c in enumerate(second_one)]
+
+                orthogonal_neighbors.add(tuple(first_one))
+                orthogonal_neighbors.add(tuple(second_one))
+
+            return orthogonal_neighbors
+
+    def get_followups(self, neighbors):
+
+        followups = set()
+
+        for neighbor in neighbors:
+            neighbor_state = self.board[neighbor].state
+            if neighbor_state == State.NO_CLICK_NO_MINE:
+                followups.add(neighbor)
+
+        return followups
 
 
 class TestBoard(unittest.TestCase):
 
-    def testGetNeighbors(self):
+    def testclick(self):
+        b = Board((50, 9), minecount=200)#, minelist=[(0, 1), (1, 1), (1, 0)])
+        print(b.click((5, 5)))
+        print(b.board)
 
-        b = Board(shape=(3, 3, 3))
-        N = b.get_neighbors((1, 1, 1))
+    def testFollowUps(self):
+        with self.subTest('3 in corner'):
+            b = Board((9, 9), minelist=[(0, 1), (1, 1), (1, 0)])
+            neighbors = b.get_neighbors((0, 0), orthogonal=True)
+
+            followups = b.get_followups(neighbors)
+            self.assertEqual(set(), followups)
+
+        with self.subTest('diagonally in corner'):
+            b = Board((2, 2), minelist=[(0, 1), (1, 0)])
+            neighbors = b.get_neighbors((0, 0), orthogonal=True)
+
+            followups = b.get_followups(neighbors)
+            self.assertEqual(set(), followups)
+
+        with self.subTest('diagonal-with-no-reach'):
+            b = Board((3, 3), minelist=[(0, 0), (0, 1), (1, 2), (2, 0), (2, 1), (2, 2)])
+            neighbors = b.get_neighbors((1, 1), orthogonal=True)
+            followups = b.get_followups(neighbors)
+            self.assertEqual({(1, 0)}, followups)
+
+        with self.subTest('3-3-with-reach'):
+            b = Board((3, 3), minelist=[(0, 0), (0, 1), (2, 0), (2, 1), (2, 2)])
+            neighbors = b.get_neighbors((1, 1), orthogonal=True)
+            followups = b.get_followups(neighbors)
+            self.assertEqual({(1, 0), (1, 2), (0, 2)}, followups)
+
+
+        with self.subTest('3-3-with-no-mines'):
+            b = Board(shape=(3, 3))
+
+            neighbors = b.get_neighbors((1, 1), orthogonal=True)
+            N = b.get_followups(neighbors)
+
+            self.assertEqual({(0, 0), (0, 1), (0, 2),
+                              (1, 0), (1, 2),
+                              (2, 0), (2, 1), (2, 2)}, N)
+
+    def testGetNeighbors(self):
+        with self.subTest('10, 1, 2'):
+            b = Board(shape=(10, 1, 2))
+            N = b.get_neighbors((1, 0, 1))
+            self.assertEqual({(0, 0, 0), (0, 0, 1),
+                              (1, 0, 0),
+                              (2, 0, 0), (2, 0, 1)}, N)
+
+        with self.subTest('3, 3'):
+            b = Board(shape=(3, 3))
+            N = b.get_neighbors((1, 1))
+            self.assertEqual({(0, 0), (0, 1), (0, 2),
+                              (1, 0), (1, 2),
+                              (2, 0), (2, 1), (2, 2)}, N)
 
     def test2DBoard(self):
 
@@ -95,7 +197,7 @@ class TestBoard(unittest.TestCase):
 
         with self.subTest('8 all around'):
             b = Board((9, 9), minelist=[(0, 0), (0, 1), (0, 2),
-                                        (1, 0),         (1, 2),
+                                        (1, 0), (1, 2),
                                         (2, 0), (2, 1), (2, 2)])
 
             self.assertEqual(8, b.click((1, 1)))
@@ -113,7 +215,7 @@ class TestBoard(unittest.TestCase):
     def testClickNewBoardWithOneCoordinateWithoutMine(self):
         b = Board(minecount=0, default_state=State.NO_CLICK_NO_MINE)
         b.click((0, 0))
-        self.assertEqual(State.YES_CLICK_NO_MINE, b.board[(0, 0)].state)
+        self.assertEqual(0, b.board[(0, 0)].state)
 
     def testOneDimensionalBoard(self):
         b = Board(shape=(5, 1), default_state=State.NO_CLICK_NO_MINE)
@@ -135,6 +237,16 @@ class TestBoard(unittest.TestCase):
             b = Board(shape=(1, 5), minelist=[[1]], default_state=State.NO_CLICK_NO_MINE)
             _Xc__ = b.click((0, 2))
             self.assertEqual(1, _Xc__)
+
+
+            expected_state = [[State.NO_CLICK_NO_MINE,
+                               State.NO_CLICK_YES_MINE,
+                               1,
+                               0,
+                               0
+                               ]]
+
+            self.assertEqual(expected_state, None)
 
         with self.subTest('3'):
             b = Board(shape=(1, 5), minelist=[[1]], default_state=State.NO_CLICK_NO_MINE)

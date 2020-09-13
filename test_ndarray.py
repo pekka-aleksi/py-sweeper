@@ -15,11 +15,14 @@ class NdArray:
 
     def __getitem__(self, coordinate):
         index = self.coordinate_to_index(coordinate=coordinate)
+
         return self.data[index]
 
     def __str__(self):
-
-        return "|".join([str(x) for x in self.data])
+        thing = zip(*(iter(self.data),) * self.shape[0])
+        return "\n".join(["|".join([str(x.state) for x in k]) for k in thing])\
+            .replace('State.NO_CLICK_YES_MINE', 'X')\
+            .replace('State.NO_CLICK_NO_MINE', 'O')
 
     def index_to_coordinate(self, index_list):
 
@@ -102,14 +105,14 @@ class TestNdArray(unittest.TestCase):
         self.assertEqual([[0, 0]], l.index_to_coordinate([0]), l)
         self.assertEqual([[0, 1]], l.index_to_coordinate([1]), l)
         self.assertEqual([[0, 9]], l.index_to_coordinate([9]), l)
-        self.assertRaises(IndexError,  l.index_to_coordinate, [10])
+        self.assertRaises(IndexError, l.index_to_coordinate, [10])
 
     def testRecursiveList3(self):
         l = NdArray(shape=[10, 1])
         self.assertEqual([[0, 0]], l.index_to_coordinate([0]), l)
         self.assertEqual([[1, 0]], l.index_to_coordinate([1]), l)
         self.assertEqual([[9, 0]], l.index_to_coordinate([9]), l)
-        self.assertRaises(IndexError,  l.index_to_coordinate, [10])
+        self.assertRaises(IndexError, l.index_to_coordinate, [10])
 
     def testRecursiveList4(self):
         l = NdArray(shape=[10, 10])
